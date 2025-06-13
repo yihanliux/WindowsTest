@@ -3,7 +3,7 @@ import os
 import cv2
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QLabel, QPushButton, QWidget, QVBoxLayout,
-    QAction, QFileDialog
+    QAction, QFileDialog, QComboBox
 )
 from PyQt5.QtGui import QIcon, QPixmap, QImage  # 图标、图像等 GUI 相关类
 from PyQt5.QtCore import Qt  # Qt 对齐方式、窗口常量等
@@ -23,6 +23,13 @@ class SimpleWindow(QMainWindow):
         # 设置默认模型模式
         self.model_mode = 'balanced'
 
+        # 模型选择标签和下拉框
+        self.model_label = QLabel("Select Pose Model:")
+        self.model_combo = QComboBox()
+        self.model_combo.addItems(["lightweight", "balanced", "performance"])
+        self.model_combo.setCurrentText(self.model_mode)
+        self.model_combo.currentTextChanged.connect(self.on_model_mode_changed)
+
         # 初始化RTMPose姿态处理器
         print(f"初始化RTMPose处理器 (模式: {self.model_mode}, 设备: {self.device})")
         self.pose_processor = RTMPoseProcessor(
@@ -31,15 +38,14 @@ class SimpleWindow(QMainWindow):
             device=self.device
         )
 
-
         self.label = QLabel("Welcome to PyQt5")  # 顶部标签控件
         self.label.setAlignment(Qt.AlignCenter)  # 设置文本居中
 
-        self.image_label = QLabel("Original Image")  # 原图显示区域
+        self.image_label = QLabel()  # 原图显示区域
         self.image_label.setAlignment(Qt.AlignCenter)  # 图片居中显示
         self.image_label.setFixedSize(400, 250)  # 限制图片区域大小
 
-        self.processed_label = QLabel("Processed Image")  # 处理后图像显示区域
+        self.processed_label = QLabel()  # 处理后图像显示区域
         self.processed_label.setAlignment(Qt.AlignCenter)
         self.processed_label.setFixedSize(400, 250)
 
@@ -48,6 +54,8 @@ class SimpleWindow(QMainWindow):
 
         layout = QVBoxLayout()  # 垂直布局
         layout.addWidget(self.label)  # 添加顶部标签
+        layout.addWidget(self.model_label)
+        layout.addWidget(self.model_combo)
         layout.addWidget(self.upload_button)  # 添加上传按钮
         layout.addWidget(self.image_label)  # 添加原图区域
         layout.addWidget(self.processed_label)  # 添加处理图区域
@@ -66,6 +74,19 @@ class SimpleWindow(QMainWindow):
         exit_action = QAction("Exit", self)  # 创建“退出”菜单项
         exit_action.triggered.connect(self.close)  # 点击菜单项时关闭窗口
         file_menu.addAction(exit_action)  # 将菜单项添加到“File”菜单中
+
+    def on_model_mode_changed(self, selected_mode):
+        self.model_mode = selected_mode
+        print(f"切换姿态模型模式为: {self.model_mode}")
+
+        # 重新初始化处理器
+        self.pose_processor = RTMPoseProcessor(
+            mode=self.model_mode,
+            backend='onnxruntime',
+            device=self.device
+        )
+
+        self.statusBar().showMessage(f"模型已切换为 {self.model_mode}")
 
     def load_image(self):
         # 弹出文件选择框，返回选择的文件路径
